@@ -210,7 +210,10 @@ void round_robin(struct UserList* lista_useri)
 
     while(lista_useri->size)
     {
-        printf("s-a executat procesul %d al utilizatorului %s timp de %f\n", user->process_list->head->pid, user->username, min_double(user->process_list->head->burst_time, user->pondere * TIME_SLICE));
+        printf("Waiting...\n");
+        double timp_minim = min_double(user->process_list->head->burst_time, user->pondere * TIME_SLICE);
+        sleep(timp_minim);
+        printf("s-a executat procesul %d al utilizatorului %s timp de %f\n", user->process_list->head->pid, user->username, timp_minim);
         user->process_list->head->burst_time -= user->pondere * TIME_SLICE;
         if(user->process_list->head->burst_time <= 0)
             pop_process_user(user);
