@@ -72,11 +72,11 @@ void add_process(struct User *user, pid_t pid, double burst_time) {
     ++ user->nr_proc;
 }
 
-void pop_process_user(struct User user) {
-    struct Process* temp = user.process_list->head;
-    user.process_list->head = user.process_list->head->next;
+void pop_process_user(struct User* user) {
+    struct Process* temp = user->process_list->head;
+    user->process_list->head = user->process_list->head->next;
     free(temp);
-    -- user.nr_proc;
+    -- user->nr_proc;
 }
 
 struct UserList* create_user_list() {
@@ -141,7 +141,7 @@ void pop_user_from_userlist (struct UserList* user_list, struct User* user) {
     -- user_list->size;
 }
 
-void genereaza_useri(struct UserList lista_useri)
+void genereaza_useri(struct UserList* lista_useri)
 {
 
     srand(time(NULL));
@@ -179,7 +179,7 @@ void genereaza_useri(struct UserList lista_useri)
             }
 
 
-            add_process(lista_useri.tail, pid, burst_time);
+            add_process(lista_useri->tail, pid, burst_time);
 
 
 
@@ -188,6 +188,25 @@ void genereaza_useri(struct UserList lista_useri)
 
         
 
+    }
+
+}
+
+void round_robin(struct UserList* lista_useri)
+{
+    struct User* user = lista_useri->head;
+
+    while(lista_useri->size)
+    {
+
+        user->process_list->head->burst_time -= user->pondere * TIME_SLICE;
+        if(user->process_list->head->burst_time <= 0)
+            pop_process_user(user);
+
+        if(!user->nr_proc)
+            pop_user_from_userlist(lista_useri, user);
+
+        user = user->next;
     }
 
 }
