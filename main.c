@@ -6,6 +6,10 @@
 #include <string.h>
 
 #define TIME_SLICE 10
+#define MAX_USERS 7
+#define MAX_PROCESSES 10
+#define MAX_BURST_TIME 15
+
 
 struct Process {
     pid_t pid;
@@ -47,25 +51,25 @@ struct Process* alloc_process() {
     return rez;
 }
 
-void add_process(struct User user, pid_t pid, double burst_time) {
+void add_process(struct User *user, pid_t pid, double burst_time) {
     struct Process* temp = alloc_process();
     temp->pid = pid;
     temp->burst_time = burst_time;
     temp->next = NULL;
     temp->prev = NULL;
-    if(!user.nr_proc) {
-        user.process_list = create_process_list();
-        user.process_list->head = temp;
-        user.process_list->tail = temp;
+    if(!user->nr_proc) {
+        user->process_list = create_process_list();
+        user->process_list->head = temp;
+        user->process_list->tail = temp;
     }
 
     else {
-        temp->prev = user.process_list->tail;
-        user.process_list->tail->next = temp;
-        user.process_list->tail = temp;
+        temp->prev = user->process_list->tail;
+        user->process_list->tail->next = temp;
+        user->process_list->tail = temp;
     }
 
-    ++ user.nr_proc;
+    ++ user->nr_proc;
 }
 
 void pop_process_user(struct User user) {
@@ -137,6 +141,56 @@ void pop_user_from_userlist (struct UserList* user_list, struct User* user) {
     -- user_list->size;
 }
 
+void genereaza_useri(struct UserList lista_useri)
+{
+
+    srand(time(NULL));
+    int nr_useri = rand() % MAX_USERS + 1;
+
+    for(int i = 0; i < nr_useri; i++)
+    {
+
+        double p = ((double)rand() / (double)(RAND_MAX));
+
+        char* username;
+
+        sprintf(username, "user%d", i);
+
+        add_user_to_userlist(&lista_useri, i, username, p);
+
+        int nr_processes = rand() % MAX_PROCESSES + 1;
+
+        for(int j = 0; j < nr_processes; j++)
+        {
+
+            double burst_time = ((double)rand() / (double)(RAND_MAX)) * (double)(MAX_BURST_TIME);
+
+            pid_t pid = fork();
+
+
+            // executare proces
+
+            if(pid == 0)
+            {
+
+                char argumente[2] = {"/bin/ls", NULL};
+
+                execve("/bin/ls", argumente, NULL);
+            }
+
+
+            add_process(lista_useri.tail, pid, burst_time);
+
+
+
+
+        }
+
+        
+
+    }
+
+}
 
 int main() {
 
