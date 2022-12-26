@@ -11,6 +11,14 @@
 #define MAX_BURST_TIME 15
 
 
+double min_double(double a, double b)
+{
+    if(a > b)
+        return b;
+    return a;    
+}
+
+
 struct Process {
     pid_t pid;
     double burst_time;
@@ -25,7 +33,7 @@ struct ProcessList {
 struct User {
     int id;
     int nr_proc;
-    char* username;
+    char username[10];
     double pondere;
     struct ProcessList* process_list; 
     struct User* next;
@@ -94,7 +102,7 @@ struct User* alloc_user() {
     return rez;
 }
 
-void add_user_to_userlist(struct UserList* user_list, int user_id, char* username_, double pondere_) {
+void add_user_to_userlist(struct UserList* user_list, int user_id, char username_[10], double pondere_) {
     struct User* temp = alloc_user();
     temp->id = user_id;
     strcpy(temp->username, username_);
@@ -147,18 +155,22 @@ void genereaza_useri(struct UserList* lista_useri)
     srand(time(NULL));
     int nr_useri = rand() % MAX_USERS + 1;
 
+    printf("NR USERI: %d\n", nr_useri);
+
     for(int i = 0; i < nr_useri; i++)
     {
 
         double p = ((double)rand() / (double)(RAND_MAX));
 
-        char* username;
+        char username[10];
 
         sprintf(username, "user%d", i);
 
-        add_user_to_userlist(&lista_useri, i, username, p);
+        add_user_to_userlist(lista_useri, i, username, p);
 
         int nr_processes = rand() % MAX_PROCESSES + 1;
+
+        printf("userul %d are %d procese\n", i, nr_processes);
 
         for(int j = 0; j < nr_processes; j++)
         {
@@ -173,7 +185,7 @@ void genereaza_useri(struct UserList* lista_useri)
             if(pid == 0)
             {
 
-                char argumente[2] = {"/bin/ls", NULL};
+                char *argumente[2] = {"/bin/ls", NULL};
 
                 execve("/bin/ls", argumente, NULL);
             }
@@ -198,7 +210,7 @@ void round_robin(struct UserList* lista_useri)
 
     while(lista_useri->size)
     {
-
+        printf("s-a executat procesul %d al utilizatorului %s timp de %f\n", user->process_list->head->pid, user->username, min_double(user->process_list->head->burst_time, user->pondere * TIME_SLICE));
         user->process_list->head->burst_time -= user->pondere * TIME_SLICE;
         if(user->process_list->head->burst_time <= 0)
             pop_process_user(user);
@@ -212,6 +224,13 @@ void round_robin(struct UserList* lista_useri)
 }
 
 int main() {
+
+    struct UserList* lista_utilizatori = create_user_list();
+
+    genereaza_useri(lista_utilizatori);
+
+    round_robin(lista_utilizatori);
+
 
     return 0;
 }
