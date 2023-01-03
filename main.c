@@ -5,11 +5,12 @@
 #include <unistd.h>
 #include <string.h>
 
-#define TIME_SLICE 10
+#define TIME_SLICE 5
 #define MAX_USERS 7
 #define MAX_PROCESSES 10
 #define MAX_BURST_TIME 15
 
+int input_counter = 0;
 
 double min_double(double a, double b)
 {
@@ -18,6 +19,11 @@ double min_double(double a, double b)
     return a;    
 }
 
+struct InputList {
+    int timp;
+    char nume[32];
+    int pid;
+}lista_input[1024];
 
 struct Process {
     pid_t pid;
@@ -204,15 +210,38 @@ void genereaza_useri(struct UserList* lista_useri)
 
 }
 
+void actualizeaza_lista(struct UserList* lista_useri, time_t timp_initial){
+    time_t timp_curent = time(NULL);
+    time_t diferenta_timp = timp_curent - timp_initial;
+    while (diferenta_timp > lista_input[input_counter].timp){
+        input_counter++;
+    } 
+}
+
+void citire_fisier(){
+    int numar_intrari, timp_input, pid_user;
+    char dummy, nume_user[32];
+    FILE* fin;
+    fin = fopen ("date.in", "r");
+    fscanf(fin, "%d", &numar_intrari);
+    for (int i=0; i<numar_intrari; i++){
+        fscanf(fin, "%d%c %s %d", &timp_input, &dummy, nume_user, &pid_user);
+        lista_input[i].timp = timp_input;
+        strcpy(lista_input[i].nume, nume_user);
+        lista_input[i].pid = pid_user;
+    }
+    fclose(fin);
+}
+
 void round_robin(struct UserList* lista_useri)
 {
     struct User* user = lista_useri->head;
-
+    time_t timp_initial = time(NULL);
     while(lista_useri->size)
     {
         printf("Waiting...\n");
         double timp_minim = min_double(user->process_list->head->burst_time, user->pondere * TIME_SLICE);
-        sleep(timp_minim);
+        sleep(timp_minim); 
         printf("s-a executat procesul %d al utilizatorului %s timp de %f\n", user->process_list->head->pid, user->username, timp_minim);
         user->process_list->head->burst_time -= user->pondere * TIME_SLICE;
         if(user->process_list->head->burst_time <= 0)
@@ -227,6 +256,8 @@ void round_robin(struct UserList* lista_useri)
 }
 
 int main() {
+
+    citire_fisier();
 
     struct UserList* lista_utilizatori = create_user_list();
 
