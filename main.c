@@ -4,6 +4,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <string.h>
+#include <search.h>
 
 #define TIME_SLICE 5
 #define MAX_USERS 7
@@ -18,6 +19,8 @@ double min_double(double a, double b)
         return b;
     return a;    
 }
+
+
 
 struct InputList {
     int timp;
@@ -39,7 +42,7 @@ struct ProcessList {
 struct User {
     int id;
     int nr_proc;
-    char username[10];
+    char username[32];
     double pondere;
     struct ProcessList* process_list; 
     struct User* next;
@@ -50,6 +53,13 @@ struct UserList {
     struct User *head, *tail;
     int size;
 };
+
+struct info_hash {
+    struct User* user_ptr;
+}info_instance[1024], *info_ptr = info_instance; //info_instance - loc unde sa pun informatiile (values) din hash
+
+char strs[1024 * 32], *ptr_str = strs;
+int id_gen = 0;
 
 struct ProcessList* create_process_list() {
     struct ProcessList* list = (struct ProcessList*)malloc(sizeof(struct ProcessList));
@@ -108,7 +118,8 @@ struct User* alloc_user() {
     return rez;
 }
 
-void add_user_to_userlist(struct UserList* user_list, int user_id, char username_[10], double pondere_) {
+// ADAUGA USER LA FINALUL LISTEI DE USERI
+void add_user_to_userlist(struct UserList* user_list, int user_id, char username_[32], double pondere_) {
     struct User* temp = alloc_user();
     temp->id = user_id;
     strcpy(temp->username, username_);
@@ -155,65 +166,92 @@ void pop_user_from_userlist (struct UserList* user_list, struct User* user) {
     -- user_list->size;
 }
 
-void genereaza_useri(struct UserList* lista_useri)
-{
+// void genereaza_useri(struct UserList* lista_useri)
+// {
 
-    srand(time(NULL));
-    int nr_useri = rand() % MAX_USERS + 1;
+//     srand(time(NULL));
+//     int nr_useri = rand() % MAX_USERS + 1;
 
-    printf("NR USERI: %d\n", nr_useri);
+//     printf("NR USERI: %d\n", nr_useri);
 
-    for(int i = 0; i < nr_useri; i++)
-    {
+//     for(int i = 0; i < nr_useri; i++)
+//     {
 
-        double p = ((double)rand() / (double)(RAND_MAX));
+//         double p = ((double)rand() / (double)(RAND_MAX));
 
-        char username[10];
+//         char username[10];
 
-        sprintf(username, "user%d", i);
+//         sprintf(username, "user%d", i);
 
-        add_user_to_userlist(lista_useri, i, username, p);
+//         add_user_to_userlist(lista_useri, i, username, p);
 
-        int nr_processes = rand() % MAX_PROCESSES + 1;
+//         int nr_processes = rand() % MAX_PROCESSES + 1;
 
-        printf("userul %d are %d procese\n", i, nr_processes);
+//         printf("userul %d are %d procese\n", i, nr_processes);
 
-        for(int j = 0; j < nr_processes; j++)
-        {
+//         for(int j = 0; j < nr_processes; j++)
+//         {
 
-            double burst_time = ((double)rand() / (double)(RAND_MAX)) * (double)(MAX_BURST_TIME);
+//             double burst_time = ((double)rand() / (double)(RAND_MAX)) * (double)(MAX_BURST_TIME);
 
-            pid_t pid = fork();
-
-
-            // executare proces
-
-            if(pid == 0)
-            {
-
-                char *argumente[2] = {"/bin/ls", NULL};
-
-                execve("/bin/ls", argumente, NULL);
-            }
+//             pid_t pid = fork();
 
 
-            add_process(lista_useri->tail, pid, burst_time);
+//             // executare proces
+
+//             if(pid == 0)
+//             {
+
+//                 char *argumente[2] = {"/bin/ls", NULL};
+
+//                 execve("/bin/ls", argumente, NULL);
+//             }
+
+
+//             add_process(lista_useri->tail, pid, burst_time);
 
 
 
 
-        }
+//         }
 
         
 
-    }
+//     }
 
-}
+// }
 
 void actualizeaza_lista(struct UserList* lista_useri, time_t timp_initial){
     time_t timp_curent = time(NULL);
     time_t diferenta_timp = timp_curent - timp_initial;
-    while (diferenta_timp > lista_input[input_counter].timp){
+    while (diferenta_timp >= lista_input[input_counter].timp){
+        ENTRY item;
+        ENTRY *found_item;
+        strcpy(ptr_str, lista_input[input_counter].nume);
+        item.key = ptr_str;
+        if((found_item = hsearch(item, FIND)) == NULL) {
+            double pondere = ((double)rand() / (double)(RAND_MAX));
+            add_user_to_userlist(lista_useri, ++ id_gen, lista_input[input_counter].nume, pondere);
+            double burst_time = ((double)rand() / (double)(RAND_MAX)) * (double)(MAX_BURST_TIME);
+            if(((double)rand() / (double)(RAND_MAX)) < (double)0.1)
+                burst_time = (double)__INT_MAX__;
+            add_process(lista_useri->tail, lista_input[input_counter].pid, burst_time);
+            info_ptr->user_ptr = lista_useri->tail;
+            item.data = info_ptr;
+
+            ptr_str += strlen(ptr_str) + 1;
+            info_ptr ++;
+            hsearch(item, ENTER);
+        }
+        
+        else {
+            struct User* user = ((struct info_hash *)found_item->data)->user_ptr;
+            double burst_time = ((double)rand() / (double)(RAND_MAX)) * (double)(MAX_BURST_TIME);
+            if(((double)rand() / (double)(RAND_MAX)) < (double)0.1)
+                burst_time = (double)__INT_MAX__;
+            add_process(user, lista_input[input_counter].pid, burst_time);
+        }
+
         input_counter++;
     } 
 }
@@ -239,6 +277,8 @@ void round_robin(struct UserList* lista_useri)
     time_t timp_initial = time(NULL);
     while(lista_useri->size)
     {
+        actualizeaza_lista(lista_useri, timp_initial);
+        printf("lista->size: %d\n", lista_useri->size);
         printf("Waiting...\n");
         double timp_minim = min_double(user->process_list->head->burst_time, user->pondere * TIME_SLICE);
         sleep(timp_minim); 
@@ -259,11 +299,21 @@ int main() {
 
     citire_fisier();
 
+    for(int i = 0; i < 6; ++ i){
+        printf("%d %s %d\n", lista_input[i].timp, lista_input[i].nume, lista_input[i].pid);
+    }
+
+    hcreate(1024);
+
     struct UserList* lista_utilizatori = create_user_list();
 
-    genereaza_useri(lista_utilizatori);
+    // genereaza_useri(lista_utilizatori);
+
+    actualizeaza_lista(lista_utilizatori, time(NULL));
 
     round_robin(lista_utilizatori);
+
+    hdestroy();
 
 
     return 0;
