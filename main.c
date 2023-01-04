@@ -11,16 +11,6 @@
 #define MAX_PROCESSES 10
 #define MAX_BURST_TIME 15
 
-int input_counter = 0;
-
-double min_double(double a, double b)
-{
-    if(a > b)
-        return b;
-    return a;    
-}
-
-
 
 struct InputList {
     int timp;
@@ -60,6 +50,15 @@ struct info_hash {
 
 char strs[1024 * 32], *ptr_str = strs;
 int id_gen = 0;
+int input_counter = 0;
+int input_list_size;
+
+double min_double(double a, double b)
+{
+    if(a > b)
+        return b;
+    return a;    
+}
 
 struct ProcessList* create_process_list() {
     struct ProcessList* list = (struct ProcessList*)malloc(sizeof(struct ProcessList));
@@ -224,7 +223,7 @@ void pop_user_from_userlist (struct UserList* user_list, struct User* user) {
 void actualizeaza_lista(struct UserList* lista_useri, time_t timp_initial){
     time_t timp_curent = time(NULL);
     time_t diferenta_timp = timp_curent - timp_initial;
-    while (diferenta_timp >= lista_input[input_counter].timp){
+    while (diferenta_timp >= lista_input[input_counter].timp && input_counter < input_list_size){
         ENTRY item;
         ENTRY *found_item;
         strcpy(ptr_str, lista_input[input_counter].nume);
@@ -235,6 +234,7 @@ void actualizeaza_lista(struct UserList* lista_useri, time_t timp_initial){
             double burst_time = ((double)rand() / (double)(RAND_MAX)) * (double)(MAX_BURST_TIME);
             if(((double)rand() / (double)(RAND_MAX)) < (double)0.1)
                 burst_time = (double)__INT_MAX__;
+            printf("burst time-ul procesului %d al userului %s este %f\n", lista_input[input_counter].pid, lista_useri->tail->username, burst_time);
             add_process(lista_useri->tail, lista_input[input_counter].pid, burst_time);
             info_ptr->user_ptr = lista_useri->tail;
             item.data = info_ptr;
@@ -249,6 +249,7 @@ void actualizeaza_lista(struct UserList* lista_useri, time_t timp_initial){
             double burst_time = ((double)rand() / (double)(RAND_MAX)) * (double)(MAX_BURST_TIME);
             if(((double)rand() / (double)(RAND_MAX)) < (double)0.1)
                 burst_time = (double)__INT_MAX__;
+            printf("burst time-ul procesului %d al userului %s este %f\n", lista_input[input_counter].pid, user->username, burst_time);
             add_process(user, lista_input[input_counter].pid, burst_time);
         }
 
@@ -262,6 +263,7 @@ void citire_fisier(){
     FILE* fin;
     fin = fopen ("date.in", "r");
     fscanf(fin, "%d", &numar_intrari);
+    input_list_size = numar_intrari;
     for (int i=0; i<numar_intrari; i++){
         fscanf(fin, "%d%c %s %d", &timp_input, &dummy, nume_user, &pid_user);
         lista_input[i].timp = timp_input;
@@ -275,14 +277,14 @@ void round_robin(struct UserList* lista_useri)
 {
     struct User* user = lista_useri->head;
     time_t timp_initial = time(NULL);
-    while(lista_useri->size)
+    while(lista_useri->size || input_counter < input_list_size) // la un moment dat pot ramane fara procese in lista, dar poate mai sunt altele care asteapta sa fie inserate in lista
     {
         actualizeaza_lista(lista_useri, timp_initial);
-        printf("lista->size: %d\n", lista_useri->size);
+        printf("lista_useri->size: %d\n", lista_useri->size);
         printf("Waiting...\n");
         double timp_minim = min_double(user->process_list->head->burst_time, user->pondere * TIME_SLICE);
         sleep(timp_minim); 
-        printf("s-a executat procesul %d al utilizatorului %s timp de %f\n", user->process_list->head->pid, user->username, timp_minim);
+        printf("s-a executat procesul %d al utilizatorului %s timp de %f s\n", user->process_list->head->pid, user->username, timp_minim);
         user->process_list->head->burst_time -= user->pondere * TIME_SLICE;
         if(user->process_list->head->burst_time <= 0)
             pop_process_user(user);
@@ -292,10 +294,11 @@ void round_robin(struct UserList* lista_useri)
 
         user = user->next;
     }
-
+    printf("\n\n=======ALGORITMUL S-A TERMINAT=======\n");
 }
 
 int main() {
+    srand(time(NULL));
 
     citire_fisier();
 
