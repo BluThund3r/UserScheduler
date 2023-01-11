@@ -6,16 +6,26 @@
 #include <string.h>
 #include <search.h>
 
-#define TIME_SLICE 5
+#define TIME_SLICE 1
 #define MAX_USERS 7
 #define MAX_PROCESSES 10
 #define MAX_BURST_TIME 15
 
+// 3 user1, user2 (3 * cuanta)
+    // 2 ... (2 * cuanta)
+    // 1 ... (1 * cuanta)
+    // 0 ... (0.8 * cuanta)
+    // -1 ... (0.6 * cuanta)
+    // -2 ... (0.3 * cuanta)
+    // -3 ... (0.1 * cuanta)
+
+double arr_ponderi[8] = {0.1, 0.3, 0.6, 0.8, 1, 2, 3};
 
 struct InputList {
     int timp;
     char nume[32];
     int pid;
+    int pondere;
 }lista_input[1024];
 
 struct Process {
@@ -229,8 +239,8 @@ void actualizeaza_lista(struct UserList* lista_useri, time_t timp_initial){
         strcpy(ptr_str, lista_input[input_counter].nume);
         item.key = ptr_str;
         if((found_item = hsearch(item, FIND)) == NULL) {
-            double pondere = ((double)rand() / (double)(RAND_MAX));
-            add_user_to_userlist(lista_useri, ++ id_gen, lista_input[input_counter].nume, pondere);
+            //double pondere = ((double)rand() / (double)(RAND_MAX));
+            add_user_to_userlist(lista_useri, ++ id_gen, lista_input[input_counter].nume, lista_input[input_counter].pondere);
             double burst_time = ((double)rand() / (double)(RAND_MAX)) * (double)(MAX_BURST_TIME);
             if(((double)rand() / (double)(RAND_MAX)) < (double)0.1)
                 burst_time = (double)__INT_MAX__;
@@ -258,17 +268,18 @@ void actualizeaza_lista(struct UserList* lista_useri, time_t timp_initial){
 }
 
 void citire_fisier(){
-    int numar_intrari, timp_input, pid_user;
+    int numar_intrari, timp_input, pid_user, pondere_user;
     char dummy, nume_user[32];
     FILE* fin;
     fin = fopen ("date.in", "r");
     fscanf(fin, "%d", &numar_intrari);
     input_list_size = numar_intrari;
     for (int i=0; i<numar_intrari; i++){
-        fscanf(fin, "%d%c %s %d", &timp_input, &dummy, nume_user, &pid_user);
+        fscanf(fin, "%d%c %s %d %d", &timp_input, &dummy, nume_user, &pid_user, &pondere_user);
         lista_input[i].timp = timp_input;
         strcpy(lista_input[i].nume, nume_user);
         lista_input[i].pid = pid_user;
+        lista_input[i].pondere = pondere_user;
     }
     fclose(fin);
 }
@@ -280,6 +291,8 @@ void round_robin(struct UserList* lista_useri)
     while(lista_useri->size || input_counter < input_list_size) // la un moment dat pot ramane fara procese in lista, dar poate mai sunt altele care asteapta sa fie inserate in lista
     {
         actualizeaza_lista(lista_useri, timp_initial);
+        // if(lista_useri->size == 0)
+        //     printf("lista goala\n");
         printf("lista_useri->size: %d\n", lista_useri->size);
         printf("Waiting...\n");
         double timp_minim = min_double(user->process_list->head->burst_time, user->pondere * TIME_SLICE);
