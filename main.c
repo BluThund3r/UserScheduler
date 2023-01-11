@@ -43,7 +43,7 @@ struct User {
     int id;
     int nr_proc;
     char username[32];
-    double pondere;
+    int pondere;
     struct ProcessList* process_list; 
     struct User* next;
     struct User* prev;
@@ -295,10 +295,10 @@ void round_robin(struct UserList* lista_useri)
         //     printf("lista goala\n");
         printf("lista_useri->size: %d\n", lista_useri->size);
         printf("Waiting...\n");
-        double timp_minim = min_double(user->process_list->head->burst_time, user->pondere * TIME_SLICE);
+        double timp_minim = min_double(user->process_list->head->burst_time, arr_ponderi[user->pondere] * TIME_SLICE);
         sleep(timp_minim); 
         printf("s-a executat procesul %d al utilizatorului %s timp de %f s\n", user->process_list->head->pid, user->username, timp_minim);
-        user->process_list->head->burst_time -= user->pondere * TIME_SLICE;
+        user->process_list->head->burst_time -= arr_ponderi[user->pondere] * TIME_SLICE;
         if(user->process_list->head->burst_time <= 0)
             pop_process_user(user);
 
