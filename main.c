@@ -298,6 +298,15 @@ void round_robin(struct UserList* lista_useri)
 }
 
 int main() {
+    // lista de useri pe mai multe nivele in functie de prioritati
+    // pentru fiecare user trebuie sa parcurgem toate procesele user-ului cu pondere * cuanta
+    // 3 user1, user2 (3 * cuanta)
+    // 2 ... (2 * cuanta)
+    // 1 ... (1 * cuanta)
+    // 0 ... (0.8 * cuanta)
+    // -1 ... (0.6 * cuanta)
+    // -2 ... (0.3 * cuanta)
+    // -3 ... (0.1 * cuanta)
     srand(time(NULL));
 
     citire_fisier();
