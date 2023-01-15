@@ -100,17 +100,11 @@ void add_process(struct User *user, pid_t pid, double burst_time) {
 }
 
 void pop_process_user(struct User* user, struct Process* process) {
-    printf("am intrat in functie\n");
-    if(process->next != NULL) {
-        printf("am intrat in if\n");
+    if(process->next != NULL)
         process->next->prev = process->prev;
-    }
-    printf("am trecut de primul if\n");
     if(process->prev != NULL)
         process->prev->next = process->next;
-    printf("am trecut de al doilea if\n");
     free(process);
-    printf("am trecut de free\n");
     -- user->nr_proc;
 }
 
@@ -193,9 +187,10 @@ void actualizeaza_lista(time_t timp_initial){
             //double pondere = ((double)rand() / (double)(RAND_MAX));
             add_user_to_userlist(niveluri[prioritate], ++ id_gen, lista_input[input_counter].nume, lista_input[input_counter].pondere);
             arr_number_users[prioritate] ++;
-            double burst_time = ((double)rand() / (double)(RAND_MAX)) * (double)(MAX_BURST_TIME);
-            if(((double)rand() / (double)(RAND_MAX)) < (double)0.1)
-                burst_time = (double)__INT_MAX__;
+            // double burst_time = ((double)rand() / (double)(RAND_MAX)) * (double)(MAX_BURST_TIME);
+            // if(((double)rand() / (double)(RAND_MAX)) < (double)0.1)
+            //     burst_time = (double)__INT_MAX__;
+            double burst_time = 6;
             printf("burst time-ul procesului %d al userului %s este %fs\n", lista_input[input_counter].pid, niveluri[prioritate]->tail->username, burst_time);
             add_process(niveluri[prioritate]->tail, lista_input[input_counter].pid, burst_time);
             info_ptr->user_ptr = niveluri[prioritate]->tail;
@@ -210,9 +205,10 @@ void actualizeaza_lista(time_t timp_initial){
             struct User* user = ((struct info_hash *)found_item->data)->user_ptr;
             if(!user->nr_proc)
                 ++ arr_number_users[prioritate];
-            double burst_time = ((double)rand() / (double)(RAND_MAX)) * (double)(MAX_BURST_TIME);
-            if(((double)rand() / (double)(RAND_MAX)) < (double)0.1)
-                burst_time = (double)__INT_MAX__;
+            // double burst_time = ((double)rand() / (double)(RAND_MAX)) * (double)(MAX_BURST_TIME);
+            // if(((double)rand() / (double)(RAND_MAX)) < (double)0.1)
+            //     burst_time = (double)__INT_MAX__;
+            double burst_time = 6;
             printf("burst time-ul procesului %d al userului %s este %f\n", lista_input[input_counter].pid, user->username, burst_time);
             add_process(user, lista_input[input_counter].pid, burst_time);
         }
@@ -254,7 +250,7 @@ void round_robin()
     {
         do {        // asteapta pana cand lista_useri are cel putin un user si mai apoi lasa algoritmul sa continue
             actualizeaza_lista(timp_initial);
-            printf("AM RAMAS BLOCAT %ld\n", time(NULL) - timp_initial);
+            // printf("AM RAMAS BLOCAT %ld\n", time(NULL) - timp_initial);
             if(lista_useri_vida && no_users){  // ma asigura ca stiu cine este urmatorul user in cazul in care lista era vida si am adaugat acum un proces nou
                 for(int i = 0; i < 7; ++ i)
                     if(arr_number_users[i])
@@ -282,8 +278,9 @@ void round_robin()
                 pr->burst_time -= timp_minim;
                 if(pr->burst_time <= 0) {
                     printf("Procesul %d al utilizatorului %s si-a terminat executia\n", pr->pid, user->username);
-                    pr = pr->next;
+                    struct Process* temp = pr->next;
                     pop_process_user(user, pr);
+                    pr = temp;
                     if(user->nr_proc == 0) {
                         -- no_users;
                         -- arr_number_users[iterator];
