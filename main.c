@@ -100,10 +100,21 @@ void add_process(struct User *user, pid_t pid, double burst_time) {
 }
 
 void pop_process_user(struct User* user, struct Process* process) {
-    if(process->next != NULL)
+    if(user->nr_proc == 1)
+        user->process_list->head = user->process_list->tail = NULL;
+    else if(process->next == NULL) {
+        process->prev->next = NULL;
+        user->process_list->tail = process->prev;
+    }
+    else if(process->prev == NULL) {
+        process->next->prev = NULL;
+        user->process_list->head = process->next;
+    }
+    else {
         process->next->prev = process->prev;
-    if(process->prev != NULL)
         process->prev->next = process->next;
+    }
+
     free(process);
     -- user->nr_proc;
 }
@@ -173,25 +184,23 @@ void add_user_to_userlist(struct UserList* user_list, int user_id, char username
 //     -- no_users;
 // }
 
-// TODO: adapteaza pentru noua "structura" a listei de useri
 void actualizeaza_lista(time_t timp_initial){
     time_t timp_curent = time(NULL);
     time_t diferenta_timp = timp_curent - timp_initial;
-    while (diferenta_timp >= lista_input[input_counter].timp && input_counter < input_list_size){
+    while (input_counter < input_list_size && diferenta_timp >= lista_input[input_counter].timp){
         ENTRY item;
         ENTRY *found_item;
         strcpy(ptr_str, lista_input[input_counter].nume);
         item.key = ptr_str;
         int prioritate = lista_input[input_counter].pondere;
         if((found_item = hsearch(item, FIND)) == NULL) {
-            //double pondere = ((double)rand() / (double)(RAND_MAX));
             add_user_to_userlist(niveluri[prioritate], ++ id_gen, lista_input[input_counter].nume, lista_input[input_counter].pondere);
             arr_number_users[prioritate] ++;
-            // double burst_time = ((double)rand() / (double)(RAND_MAX)) * (double)(MAX_BURST_TIME);
-            // if(((double)rand() / (double)(RAND_MAX)) < (double)0.1)
-            //     burst_time = (double)__INT_MAX__;
-            double burst_time = 6;
-            printf("burst time-ul procesului %d al userului %s este %fs\n", lista_input[input_counter].pid, niveluri[prioritate]->tail->username, burst_time);
+            double burst_time = ((double)rand() / (double)(RAND_MAX)) * (double)(MAX_BURST_TIME);
+            if(((double)rand() / (double)(RAND_MAX)) < (double)0.1)
+                burst_time = (double)__INT_MAX__;
+            // double burst_time = 6;
+            printf("A fost adaugat procesul %d al user-ului %s, avand burst time de %.2fs\n", lista_input[input_counter].pid, niveluri[prioritate]->tail->username, burst_time);
             add_process(niveluri[prioritate]->tail, lista_input[input_counter].pid, burst_time);
             info_ptr->user_ptr = niveluri[prioritate]->tail;
             item.data = info_ptr;
@@ -205,11 +214,11 @@ void actualizeaza_lista(time_t timp_initial){
             struct User* user = ((struct info_hash *)found_item->data)->user_ptr;
             if(!user->nr_proc)
                 ++ arr_number_users[prioritate];
-            // double burst_time = ((double)rand() / (double)(RAND_MAX)) * (double)(MAX_BURST_TIME);
-            // if(((double)rand() / (double)(RAND_MAX)) < (double)0.1)
-            //     burst_time = (double)__INT_MAX__;
-            double burst_time = 6;
-            printf("burst time-ul procesului %d al userului %s este %f\n", lista_input[input_counter].pid, user->username, burst_time);
+            double burst_time = ((double)rand() / (double)(RAND_MAX)) * (double)(MAX_BURST_TIME);
+            if(((double)rand() / (double)(RAND_MAX)) < (double)0.1)
+                burst_time = (double)__INT_MAX__;
+            // double burst_time = 6;
+            printf("A fost adaugat procesul %d al user-ului %s, avand burst time de %.2fs\n", lista_input[input_counter].pid, user->username, burst_time);
             add_process(user, lista_input[input_counter].pid, burst_time);
         }
 
@@ -217,7 +226,6 @@ void actualizeaza_lista(time_t timp_initial){
     } 
 }
 
-//TODO: maybe citim si burst_time de la tastatura in loc sa il generam random ca sa se vada clar cat are fiecare proces (sau printam)
 void citire_fisier(){
     int numar_intrari, timp_input, pid_user, pondere_user;
     char dummy, nume_user[32];
@@ -235,13 +243,14 @@ void citire_fisier(){
     fclose(fin);
 }
 
-//TODO: Modifica pentru noua structura - mai mulde detalii mai jos
 void round_robin()
 {
     int iterator;
     for(int i = 0; i < 7; ++ i)
-        if(arr_number_users[i]) 
+        if(arr_number_users[i]) {
             iterator = i;
+            break;
+        }
 
     time_t timp_initial = time(NULL);
     int lista_useri_vida = 0;
@@ -278,8 +287,8 @@ void round_robin()
             {
                 printf("Waiting...\n");
                 double timp_minim = min_double(pr->burst_time, arr_ponderi[iterator] * TIME_SLICE);
-                sleep(timp_minim);
-                printf("S-a executat procesul %d al utilizatorului %s timp de %fs\n", pr->pid, user->username, timp_minim);
+                usleep(timp_minim * 1000000);       // usleep asteapta numar intreg de microsecunde, pe cand sleep astepta numar intreg de secunde
+                printf("S-a executat procesul %d al utilizatorului %s timp de %.2fs\n", pr->pid, user->username, timp_minim);
                 pr->burst_time -= timp_minim;
                 if(pr->burst_time <= 0) {
                     printf("Procesul %d al utilizatorului %s si-a terminat executia\n", pr->pid, user->username);
@@ -306,16 +315,6 @@ void round_robin()
 }
 
 int main() {
-    // fiecare nivel are o UserList*
-    // 3 -> user1, user2 (3 * cuanta)
-    // 2 -> NONE (2 * cuanta)
-    // 1 -> user3 (1 * cuanta)
-    // 0 -> user4, user5 (0.8 * cuanta)
-    // -1 -> user6 (0.6 * cuanta)
-    // -2 -> none (0.3 * cuanta)
-    // -3 -> user7, user8 (0.1 * cuanta)
-    // array-ul de niveluri se parcurge in ordine round-robin, iar lista din niveluri[i] de la head -> tail,
-    // la fiecare iteratie prin lista niveluri[i] parcurgem toate procesele ale tuturor user-ilor din lista asta
     srand(time(NULL));
 
     citire_fisier();
@@ -328,8 +327,6 @@ int main() {
     }
 
     hcreate(1024);
-
-    struct UserList* lista_utilizatori = create_user_list();
     
     actualizeaza_lista(time(NULL));
 
