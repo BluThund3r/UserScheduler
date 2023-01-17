@@ -1,8 +1,8 @@
 7
-0: user1 241412 1  
-1: user2 3625 2
-2: user3 87635 3
-3: user2 632 4
-3: user1 12941 1
-4: user3 98735 3 
-20: user1 7293 1
+0: user1 1 0  
+1: user2 2 2
+2: user3 3 3
+3: user2 4 2
+3: user1 5 0
+4: user3 6 3 
+20: user1 7 0
